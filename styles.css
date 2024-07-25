@@ -1,0 +1,39 @@
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+}
+
+.container {
+    text-align: center;
+}
+
+#svgContainer {
+    width: 400px;
+    height: 400px;
+    border: 2px solid #ccc;
+    margin: 20px auto;
+    position: relative;
+    overflow: hidden;
+}
+
+#svgContainer svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: move;
+}
+
+.controls {
+    margin-top: 20px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
