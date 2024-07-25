@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Paper.js Image Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paper.js/0.12.15/paper-full.min.js"></script>
+    <style>
+      canvas {
+        border: 1px solid #000;
+      }
+      #controls {
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="myCanvas" resize></canvas>
+    <div id="controls">
+      <input type="file" id="imageUpload" accept="image/*" multiple />
+      <button id="switchImage">Switch Image</button>
+    </div>
+
+    <script type="text/paperscript" canvas="myCanvas">
+      var images = [];
+      var currentImageIndex = 0;
+      var handles = [];
+
+      function loadImage(file) {
+          var reader = new FileReader();
+          reader.onload = function(event) {
+              var img = new Image();
+              img.onload = function() {
+                  var raster = new Raster(img);
+                  raster.position = view.center;
+                  raster.scale(0.5);
+                  images.push(raster);
+                  if (images.length === 1) {
+                      createHandles(raster);
+                  } else {
+                      raster.visible = false;
+                  }
+              }
+              img.src = event.target.result;
+          }
+          reader.readAsDataURL(file);
+      }
+
+      function createHandles(raster) {
+          var bounds = raster.bounds;
+          handles = [];
+
+          // Corner handles
+          handles.push(new Path.Circle(bounds.topLeft, 5));
+          handles.push(new Path.Circle(bounds.topRight, 5));
+          handles.push(new Path.Circle(bounds.bottomRight, 5));
+          handles.push(new Path.Circle(bounds.bottomLeft, 5));
+
+          // Edge handles
+          handles.push(new Path.Circle(bounds.topCenter, 5));
+          handles.push(new Path.Circle(bounds.rightCenter, 5));
+          handles.push(new Path.Circle(bounds.bottomCenter, 5));
+          handles.push(new Path.Circle(bounds.leftCenter, 5));
+
+          handles.forEach(function(handle) {
+              handle.fillColor = 'blue';
+          });
+      }
+
+      function updateHandles() {
+          var raster = images[currentImageIndex];
+          var bounds = raster.bounds;
+
+          handles[0].position = bounds.topLeft;
+          handles[1].position = bounds.topRight;
+          handles[2].position = bounds.bottomRight;
+          handles[3].position = bounds.bottomLeft;
+          handles[4].position = bounds.topCenter;
+          handles[5].position = bounds.rightCenter;
+          handles[6].position = bounds.bottomCenter;
+          handles[7].position = bounds.leftCenter;
+      }
+
+      function onMouseDown(event) {
+          var hitResult = project.hitTest(event.point, {
+              tolerance: 5,
+              fill: true
+          });
+
+          if (hitResult && hitResult.item instanceof Path) {
+              hitResult.item.selected = true;
+          }
+      }
+
+      function onMouseDrag(event) {
+          var selectedHandle = project.selectedItems[0];
+          if (selectedHandle) {
+              var raster = images[currentImageIndex];
+              var bounds = raster.bounds;
+              var index = handles.indexOf(selectedHandle);
+
+              switch(index) {
+                  case 0: // Top-left
+                      bounds.topLeft = event.point;
+                      break;
+                  case 1: // Top-right
+                      bounds.topRight = event.point;
+                      break;
+                  case 2: // Bottom-right
+                      bounds.bottomRight = event.point;
+                      break;
+                  case 3: // Bottom-left
+                      bounds.bottomLeft = event.point;
+                      break;
+                  case 4: // Top-center
+                      bounds.top = event.point.y;
+                      break;
+                  case 5: // Right-center
+                      bounds.right = event.point.x;
+                      break;
+                  case 6: // Bottom-center
+                      bounds.bottom = event.point.y;
+                      break;
+                  case 7: // Left-center
+                      bounds.left = event.point.x;
+                      break;
+              }
+
+              raster.bounds = bounds;
+              updateHandles();
+          }
+      }
+
+      function onMouseUp(event) {
+          project.selectedItems.forEach(function(item) {
+              item.selected = false;
+          });
+      }
+
+      // Handle file input
+      var imageUpload = document.getElementById('imageUpload');
+      imageUpload.addEventListener('change', function(e) {
+          var files = e.target.files;
+          for (var i = 0; i < files.length && i < 2; i++) {
+              loadImage(files[i]);
+          }
+      });
+
+      // Handle switch button
+      var switchButton = document.getElementById('switchImage');
+      switchButton.addEventListener('click', function() {
+          if (images.length === 2) {
+              currentImageIndex = 1 - currentImageIndex;
+              images.forEach(function(img, index) {
+                  img.visible = (index === currentImageIndex);
+              });
+              updateHandles();
+          }
+      });
+    </script>
+  </body>
+</html>
