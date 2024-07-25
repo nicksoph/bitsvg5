@@ -8,9 +8,10 @@
     <style>
       canvas {
         border: 1px solid #000;
+        margin-bottom: 10px;
       }
       #controls {
-        margin-top: 10px;
+        margin-bottom: 10px;
       }
     </style>
   </head>
@@ -19,12 +20,14 @@
     <div id="controls">
       <input type="file" id="imageUpload" accept="image/*" multiple />
       <button id="switchImage">Switch Image</button>
+      <button id="resetImage">Reset Image</button>
     </div>
 
     <script type="text/paperscript" canvas="myCanvas">
       var images = [];
       var currentImageIndex = 0;
       var handles = [];
+      var originalSizes = [];
 
       function loadImage(file) {
           var reader = new FileReader();
@@ -32,8 +35,12 @@
               var img = new Image();
               img.onload = function() {
                   var raster = new Raster(img);
-                  raster.position = view.center;
-                  raster.scale(0.5);
+                  fitImageToCanvas(raster);
+                  originalSizes.push({
+                      width: raster.width,
+                      height: raster.height,
+                      position: raster.position.clone()
+                  });
                   images.push(raster);
                   if (images.length === 1) {
                       createHandles(raster);
@@ -46,9 +53,23 @@
           reader.readAsDataURL(file);
       }
 
+      function fitImageToCanvas(raster) {
+          var canvasSize = view.size;
+          var scale = Math.min(
+              canvasSize.width / raster.width,
+              canvasSize.height / raster.height
+          ) * 0.8; // 80% of the canvas size
+          raster.scale(scale);
+          raster.position = view.center;
+      }
+
       function createHandles(raster) {
-          var bounds = raster.bounds;
+          handles.forEach(function(handle) {
+              handle.remove();
+          });
           handles = [];
+
+          var bounds = raster.bounds;
 
           // Corner handles
           handles.push(new Path.Circle(bounds.topLeft, 5));
@@ -81,6 +102,8 @@
           handles[7].position = bounds.leftCenter;
       }
 
+      var selectedHandle = null;
+
       function onMouseDown(event) {
           var hitResult = project.hitTest(event.point, {
               tolerance: 5,
@@ -88,12 +111,12 @@
           });
 
           if (hitResult && hitResult.item instanceof Path) {
-              hitResult.item.selected = true;
+              selectedHandle = hitResult.item;
+              selectedHandle.fillColor = 'red';
           }
       }
 
       function onMouseDrag(event) {
-          var selectedHandle = project.selectedItems[0];
           if (selectedHandle) {
               var raster = images[currentImageIndex];
               var bounds = raster.bounds;
@@ -132,9 +155,10 @@
       }
 
       function onMouseUp(event) {
-          project.selectedItems.forEach(function(item) {
-              item.selected = false;
-          });
+          if (selectedHandle) {
+              selectedHandle.fillColor = 'blue';
+              selectedHandle = null;
+          }
       }
 
       // Handle file input
@@ -154,7 +178,20 @@
               images.forEach(function(img, index) {
                   img.visible = (index === currentImageIndex);
               });
-              updateHandles();
+              createHandles(images[currentImageIndex]);
+          }
+      });
+
+      // Handle reset button
+      var resetButton = document.getElementById('resetImage');
+      resetButton.addEventListener('click', function() {
+          if (images.length > 0) {
+              var raster = images[currentImageIndex];
+              var originalSize = originalSizes[currentImageIndex];
+              raster.size = new Size(originalSize.width, originalSize.height);
+              raster.position = originalSize.position;
+              fitImageToCanvas(raster);
+              createHandles(raster);
           }
       });
     </script>
