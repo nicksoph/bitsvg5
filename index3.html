@@ -64,34 +64,121 @@
       }
 
       function createHandles(raster) {
+          // Remove existing handles
           handles.forEach(function(handle) {
               handle.remove();
           });
           handles = [];
 
           var bounds = raster.bounds;
+          var handleSize = 10;
 
           // Corner handles
-          handles.push(new Path.Circle(bounds.topLeft, 5));
-          handles.push(new Path.Circle(bounds.topRight, 5));
-          handles.push(new Path.Circle(bounds.bottomRight, 5));
-          handles.push(new Path.Circle(bounds.bottomLeft, 5));
+          handles.push(new Path.Circle(bounds.topLeft, handleSize));
+          handles.push(new Path.Circle(bounds.topRight, handleSize));
+          handles.push(new Path.Circle(bounds.bottomRight, handleSize));
+          handles.push(new Path.Circle(bounds.bottomLeft, handleSize));
 
           // Edge handles
-          handles.push(new Path.Circle(bounds.topCenter, 5));
-          handles.push(new Path.Circle(bounds.rightCenter, 5));
-          handles.push(new Path.Circle(bounds.bottomCenter, 5));
-          handles.push(new Path.Circle(bounds.leftCenter, 5));
+          handles.push(new Path.Circle(bounds.topCenter, handleSize));
+          handles.push(new Path.Circle(bounds.rightCenter, handleSize));
+          handles.push(new Path.Circle(bounds.bottomCenter, handleSize));
+          handles.push(new Path.Circle(bounds.leftCenter, handleSize));
 
-          handles.forEach(function(handle) {
+          handles.forEach(function(handle, index) {
               handle.fillColor = 'blue';
+              handle.strokeColor = 'white';
+              handle.strokeWidth = 2;
+              handle.data.type = 'handle';
+              handle.data.index = index;
           });
+
+          // Create a group for easier management
+          var group = new Group(handles);
+          group.addChild(raster);
+          return group;
       }
 
-      function updateHandles() {
+      var activeHandle = null;
+      var startPosition = null;
+      var startBounds = null;
+
+      function onMouseDown(event) {
+          var hitResult = project.hitTest(event.point, {
+              tolerance: 5,
+              fill: true
+          });
+
+          if (hitResult && hitResult.item.data.type === 'handle') {
+              activeHandle = hitResult.item;
+              activeHandle.fillColor = 'red';
+              startPosition = event.point;
+              startBounds = images[currentImageIndex].bounds.clone();
+          } else if (hitResult && hitResult.item === images[currentImageIndex]) {
+              activeHandle = images[currentImageIndex];
+              startPosition = event.point;
+          }
+      }
+
+      function onMouseDrag(event) {
+          if (!activeHandle) return;
+
           var raster = images[currentImageIndex];
           var bounds = raster.bounds;
+          var delta = event.point.subtract(startPosition);
 
+          if (activeHandle === raster) {
+              // Move the entire image
+              raster.position = raster.position.add(delta);
+              handles.forEach(function(handle) {
+                  handle.position = handle.position.add(delta);
+              });
+          } else {
+              // Resize the image
+              var index = activeHandle.data.index;
+              switch(index) {
+                  case 0: // Top-left
+                      bounds.topLeft = bounds.topLeft.add(delta);
+                      break;
+                  case 1: // Top-right
+                      bounds.topRight = bounds.topRight.add(delta);
+                      break;
+                  case 2: // Bottom-right
+                      bounds.bottomRight = bounds.bottomRight.add(delta);
+                      break;
+                  case 3: // Bottom-left
+                      bounds.bottomLeft = bounds.bottomLeft.add(delta);
+                      break;
+                  case 4: // Top-center
+                      bounds.top += delta.y;
+                      break;
+                  case 5: // Right-center
+                      bounds.right += delta.x;
+                      break;
+                  case 6: // Bottom-center
+                      bounds.bottom += delta.y;
+                      break;
+                  case 7: // Left-center
+                      bounds.left += delta.x;
+                      break;
+              }
+              raster.bounds = bounds;
+              updateHandlePositions();
+          }
+          startPosition = event.point;
+      }
+
+      function onMouseUp(event) {
+          if (activeHandle && activeHandle.data.type === 'handle') {
+              activeHandle.fillColor = 'blue';
+          }
+          activeHandle = null;
+          startPosition = null;
+          startBounds = null;
+      }
+
+      function updateHandlePositions() {
+          var bounds = images[currentImageIndex].bounds;
           handles[0].position = bounds.topLeft;
           handles[1].position = bounds.topRight;
           handles[2].position = bounds.bottomRight;
@@ -100,65 +187,6 @@
           handles[5].position = bounds.rightCenter;
           handles[6].position = bounds.bottomCenter;
           handles[7].position = bounds.leftCenter;
-      }
-
-      var selectedHandle = null;
-
-      function onMouseDown(event) {
-          var hitResult = project.hitTest(event.point, {
-              tolerance: 5,
-              fill: true
-          });
-
-          if (hitResult && hitResult.item instanceof Path) {
-              selectedHandle = hitResult.item;
-              selectedHandle.fillColor = 'red';
-          }
-      }
-
-      function onMouseDrag(event) {
-          if (selectedHandle) {
-              var raster = images[currentImageIndex];
-              var bounds = raster.bounds;
-              var index = handles.indexOf(selectedHandle);
-
-              switch(index) {
-                  case 0: // Top-left
-                      bounds.topLeft = event.point;
-                      break;
-                  case 1: // Top-right
-                      bounds.topRight = event.point;
-                      break;
-                  case 2: // Bottom-right
-                      bounds.bottomRight = event.point;
-                      break;
-                  case 3: // Bottom-left
-                      bounds.bottomLeft = event.point;
-                      break;
-                  case 4: // Top-center
-                      bounds.top = event.point.y;
-                      break;
-                  case 5: // Right-center
-                      bounds.right = event.point.x;
-                      break;
-                  case 6: // Bottom-center
-                      bounds.bottom = event.point.y;
-                      break;
-                  case 7: // Left-center
-                      bounds.left = event.point.x;
-                      break;
-              }
-
-              raster.bounds = bounds;
-              updateHandles();
-          }
-      }
-
-      function onMouseUp(event) {
-          if (selectedHandle) {
-              selectedHandle.fillColor = 'blue';
-              selectedHandle = null;
-          }
       }
 
       // Handle file input
