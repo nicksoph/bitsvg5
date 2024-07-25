@@ -104,6 +104,13 @@
     </div>
     <div id="debug-output"></div>
     <script>
+      const debugOutput = document.getElementById("debug-output");
+
+      function debugLog(message) {
+        console.log(message);
+        debugOutput.innerHTML += message + "\n";
+        debugOutput.scrollTop = debugOutput.scrollHeight;
+      }
       const canvas = new fabric.Canvas("image-canvas");
       let bitmapImage, svgImage;
       let activeObject = "bitmap";
