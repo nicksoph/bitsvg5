@@ -5,6 +5,7 @@ const saveButton = document.getElementById('saveButton');
 let svg = null;
 let isDragging = false;
 let startX, startY, originalX, originalY;
+let scale = 1;
 
 fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -20,9 +21,28 @@ fileInput.addEventListener('change', (e) => {
 });
 
 function makeSVGInteractive() {
-    svg.style.width = '100%';
-    svg.style.height = '100%';
+    const viewBox = svg.getAttribute('viewBox');
+    const [minX, minY, width, height] = viewBox ? viewBox.split(' ').map(Number) : [0, 0, 100, 100];
+    const aspectRatio = width / height;
+
+    const containerWidth = svgContainer.clientWidth;
+    const containerHeight = svgContainer.clientHeight;
+    const containerAspectRatio = containerWidth / containerHeight;
+
+    let svgWidth, svgHeight;
+    if (aspectRatio > containerAspectRatio) {
+        svgWidth = containerWidth;
+        svgHeight = containerWidth / aspectRatio;
+    } else {
+        svgHeight = containerHeight;
+        svgWidth = containerHeight * aspectRatio;
+    }
+
+    svg.style.width = `${svgWidth}px`;
+    svg.style.height = `${svgHeight}px`;
     svg.style.position = 'absolute';
+    svg.style.left = `${(containerWidth - svgWidth) / 2}px`;
+    svg.style.top = `${(containerHeight - svgHeight) / 2}px`;
 
     svg.addEventListener('mousedown', startDragging);
     document.addEventListener('mousemove', drag);
@@ -32,6 +52,7 @@ function makeSVGInteractive() {
 }
 
 function startDragging(e) {
+    e.preventDefault();
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;
@@ -54,11 +75,21 @@ function stopDragging() {
 
 function resize(e) {
     e.preventDefault();
-    const scale = e.deltaY < 0 ? 1.1 : 0.9;
-    const currentWidth = svg.clientWidth;
-    const currentHeight = svg.clientHeight;
-    svg.style.width = `${currentWidth * scale}px`;
-    svg.style.height = `${currentHeight * scale}px`;
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale *= delta;
+
+    const rect = svg.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const newWidth = rect.width * delta;
+    const newHeight = rect.height * delta;
+
+    svg.style.width = `${newWidth}px`;
+    svg.style.height = `${newHeight}px`;
+
+    svg.style.left = `${centerX - newWidth / 2}px`;
+    svg.style.top = `${centerY - newHeight / 2}px`;
 }
 
 saveButton.addEventListener('click', () => {
