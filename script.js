@@ -21,34 +21,32 @@ fileInput.addEventListener('change', (e) => {
 });
 
 function makeSVGInteractive() {
-    const viewBox = svg.getAttribute('viewBox');
-    const [minX, minY, width, height] = viewBox ? viewBox.split(' ').map(Number) : [0, 0, 100, 100];
-    const aspectRatio = width / height;
+    if (!svg) return;
 
-    const containerWidth = svgContainer.clientWidth;
-    const containerHeight = svgContainer.clientHeight;
-    const containerAspectRatio = containerWidth / containerHeight;
+    // Remove any existing width and height attributes
+    svg.removeAttribute('width');
+    svg.removeAttribute('height');
 
-    let svgWidth, svgHeight;
-    if (aspectRatio > containerAspectRatio) {
-        svgWidth = containerWidth;
-        svgHeight = containerWidth / aspectRatio;
-    } else {
-        svgHeight = containerHeight;
-        svgWidth = containerHeight * aspectRatio;
+    // Set the SVG to fill the container while maintaining aspect ratio
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.display = 'block'; // Ensures the SVG takes up the full space
+
+    // Ensure the viewBox is set
+    if (!svg.getAttribute('viewBox')) {
+        const bbox = svg.getBBox();
+        svg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
     }
 
-    svg.style.width = `${svgWidth}px`;
-    svg.style.height = `${svgHeight}px`;
-    svg.style.position = 'absolute';
-    svg.style.left = `${(containerWidth - svgWidth) / 2}px`;
-    svg.style.top = `${(containerHeight - svgHeight) / 2}px`;
+    // Center the SVG content
+    const viewBox = svg.getAttribute('viewBox').split(' ').map(Number);
+    svg.style.overflow = 'visible';
+    svg.style.transform = `translate(${-viewBox[0]}px, ${-viewBox[1]}px)`;
 
     svg.addEventListener('mousedown', startDragging);
     document.addEventListener('mousemove', drag);
     document.addEventListener('mouseup', stopDragging);
-
-    svg.addEventListener('wheel', resize);
+    svgContainer.addEventListener('wheel', resize);
 }
 
 function startDragging(e) {
@@ -56,16 +54,15 @@ function startDragging(e) {
     isDragging = true;
     startX = e.clientX;
     startY = e.clientY;
-    originalX = svg.offsetLeft;
-    originalY = svg.offsetTop;
+    originalX = svg.getBoundingClientRect().left - svgContainer.getBoundingClientRect().left;
+    originalY = svg.getBoundingClientRect().top - svgContainer.getBoundingClientRect().top;
 }
 
 function drag(e) {
     if (isDragging) {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-        svg.style.left = `${originalX + dx}px`;
-        svg.style.top = `${originalY + dy}px`;
+        svg.style.transform = `translate(${originalX + dx}px, ${originalY + dy}px) scale(${scale})`;
     }
 }
 
@@ -79,17 +76,20 @@ function resize(e) {
     scale *= delta;
 
     const rect = svg.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+    const containerRect = svgContainer.getBoundingClientRect();
 
-    const newWidth = rect.width * delta;
-    const newHeight = rect.height * delta;
+    const mouseX = e.clientX - containerRect.left;
+    const mouseY = e.clientY - containerRect.top;
 
-    svg.style.width = `${newWidth}px`;
-    svg.style.height = `${newHeight}px`;
+    const dx = (mouseX - rect.left) * (1 - delta);
+    const dy = (mouseY - rect.top) * (1 - delta);
 
-    svg.style.left = `${centerX - newWidth / 2}px`;
-    svg.style.top = `${centerY - newHeight / 2}px`;
+    const currentTransform = svg.style.transform;
+    const match = currentTransform.match(/translate\(([\d.-]+)px,\s*([\d.-]+)px\)/);
+    const currentX = match ? parseFloat(match[1]) : 0;
+    const currentY = match ? parseFloat(match[2]) : 0;
+
+    svg.style.transform = `translate(${currentX + dx}px, ${currentY + dy}px) scale(${scale})`;
 }
 
 saveButton.addEventListener('click', () => {
