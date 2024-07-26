@@ -57,7 +57,22 @@
         reader.readAsDataURL(file);
       });
 
-      // Rest of the code remains the same...
+      // Get the position of the SVG element relative to the bitmap image
+      const svgRect = svg.getBoundingClientRect();
+      const bitmapRect = bitmap.getBoundingClientRect();
+      const svgX = svgRect.left - bitmapRect.left;
+      const svgY = svgRect.top - bitmapRect.top;
+
+      // Get the color of the pixel at the SVG element's position
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      context.drawImage(bitmap, 0, 0);
+      const pixelColor = context.getImageData(svgX, svgY, 1, 1).data;
+
+      // Apply the color to the SVG element
+      svg.style.fill = `rgb(${pixelColor[0]}, ${pixelColor[1]}, ${pixelColor[2]})`;
     </script>
   </body>
 </html>
