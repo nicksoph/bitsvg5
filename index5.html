@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .container {
+        position: relative;
+        width: 400px;
+        height: 400px;
+      }
+
+      .bitmap {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <input type="file" id="bitmapFile" accept="image/png" />
+      <input type="file" id="svgFile" accept="image/svg+xml" />
+      <img class="bitmap" src="" alt="Bitmap Image" />
+      <img class="svg" src="" alt="SVG Image" />
+    </div>
+
+    <script>
+      const bitmapFileInput = document.querySelector("#bitmapFile");
+      const svgFileInput = document.querySelector("#svgFile");
+      const bitmap = document.querySelector(".bitmap");
+      const svg = document.querySelector(".svg");
+
+      bitmapFileInput.addEventListener("change", function () {
+        const file = bitmapFileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          bitmap.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      svgFileInput.addEventListener("change", function () {
+        const file = svgFileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          svg.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // Rest of the code remains the same...
+    </script>
+  </body>
+</html>
