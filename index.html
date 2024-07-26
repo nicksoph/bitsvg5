@@ -16,7 +16,8 @@
         border: 1px solid #ccc;
       }
 
-      .bitmap, .svg-container {
+      .bitmap,
+      .svg-container {
         position: absolute;
         top: 50%;
         left: 50%;
@@ -35,7 +36,8 @@
         display: none;
       }
 
-      .file-inputs label, button {
+      .file-inputs label,
+      button {
         display: inline-block;
         padding: 10px 15px;
         background-color: #f0f0f0;
@@ -53,10 +55,26 @@
         border-radius: 50%;
       }
 
-      .resize-handle.nw { top: -5px; left: -5px; cursor: nwse-resize; }
-      .resize-handle.ne { top: -5px; right: -5px; cursor: nesw-resize; }
-      .resize-handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
-      .resize-handle.se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+      .resize-handle.nw {
+        top: -5px;
+        left: -5px;
+        cursor: nwse-resize;
+      }
+      .resize-handle.ne {
+        top: -5px;
+        right: -5px;
+        cursor: nesw-resize;
+      }
+      .resize-handle.sw {
+        bottom: -5px;
+        left: -5px;
+        cursor: nesw-resize;
+      }
+      .resize-handle.se {
+        bottom: -5px;
+        right: -5px;
+        cursor: nwse-resize;
+      }
     </style>
   </head>
   <body>
@@ -106,8 +124,8 @@
           reader.onload = function (e) {
             imgElement.src = e.target.result;
             imgElement.onload = () => {
-              imgElement.style.width = imgElement.naturalWidth + 'px';
-              imgElement.style.height = imgElement.naturalHeight + 'px';
+              imgElement.style.width = imgElement.naturalWidth + "px";
+              imgElement.style.height = imgElement.naturalHeight + "px";
               resolve();
             };
           };
@@ -147,14 +165,18 @@
         const svgRect = svgContainer.getBoundingClientRect();
         const bitmapRect = bitmap.getBoundingClientRect();
 
-        const relativeX = (svgRect.left + svgRect.width / 2 - bitmapRect.left) / zoom;
-        const relativeY = (svgRect.top + svgRect.height / 2 - bitmapRect.top) / zoom;
+        const relativeX =
+          (svgRect.left + svgRect.width / 2 - bitmapRect.left) / zoom;
+        const relativeY =
+          (svgRect.top + svgRect.height / 2 - bitmapRect.top) / zoom;
 
         const bitmapX = bitmap.naturalWidth / 2 + relativeX;
         const bitmapY = bitmap.naturalHeight / 2 + relativeY;
 
         const color = getColorAtPoint(bitmapX, bitmapY);
-        colorInfo.textContent = `SVG center position: (${relativeX.toFixed(2)}, ${relativeY.toFixed(2)}), Color: ${color}`;
+        colorInfo.textContent = `SVG center position: (${relativeX.toFixed(
+          2
+        )}, ${relativeY.toFixed(2)}), Color: ${color}`;
       }
 
       document.getElementById("zoomIn").addEventListener("click", () => {
@@ -187,7 +209,7 @@
       let isDragging = false;
       let startX, startY;
 
-      svgContainer.addEventListener('mousedown', (e) => {
+      svgContainer.addEventListener("mousedown", (e) => {
         if (e.target === svg) {
           isDragging = true;
           startX = e.clientX - svgX;
@@ -195,7 +217,7 @@
         }
       });
 
-      document.addEventListener('mousemove', (e) => {
+      document.addEventListener("mousemove", (e) => {
         if (isDragging) {
           svgX = e.clientX - startX;
           svgY = e.clientY - startY;
@@ -203,38 +225,44 @@
         }
       });
 
-      document.addEventListener('mouseup', () => {
+      document.addEventListener("mouseup", () => {
         isDragging = false;
       });
 
       // Resize functionality
-      const resizeHandles = document.querySelectorAll('.resize-handle');
+      const resizeHandles = document.querySelectorAll(".resize-handle");
       let isResizing = false;
       let currentHandle;
 
-      resizeHandles.forEach(handle => {
-        handle.addEventListener('mousedown', (e) => {
+      resizeHandles.forEach((handle) => {
+        handle.addEventListener("mousedown", (e) => {
           isResizing = true;
           currentHandle = e.target;
           e.stopPropagation();
         });
       });
 
-      document.addEventListener('mousemove', (e) => {
+      document.addEventListener("mousemove", (e) => {
         if (isResizing) {
           const svgRect = svg.getBoundingClientRect();
           const containerRect = imageContainer.getBoundingClientRect();
-          
+
           let newWidth, newHeight;
-          
-          if (currentHandle.classList.contains('se') || currentHandle.classList.contains('ne')) {
+
+          if (
+            currentHandle.classList.contains("se") ||
+            currentHandle.classList.contains("ne")
+          ) {
             newWidth = e.clientX - svgRect.left;
           } else {
             newWidth = svgRect.right - e.clientX;
             svgX += (svgRect.width - newWidth) / 2;
           }
-          
-          if (currentHandle.classList.contains('se') || currentHandle.classList.contains('sw')) {
+
+          if (
+            currentHandle.classList.contains("se") ||
+            currentHandle.classList.contains("sw")
+          ) {
             newHeight = e.clientY - svgRect.top;
           } else {
             newHeight = svgRect.bottom - e.clientY;
@@ -249,7 +277,7 @@
         }
       });
 
-      document.addEventListener('mouseup', () => {
+      document.addEventListener("mouseup", () => {
         isResizing = false;
       });
     </script>
