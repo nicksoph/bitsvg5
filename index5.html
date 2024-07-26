@@ -3,30 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SVG Control Points</title>
+    <title>SVG Coloring Application</title>
     <style>
-      .container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
       }
-      .file-inputs,
-      .controls {
-        margin-bottom: 20px;
+      .container {
+        position: relative;
+        width: 100%;
+        height: 100%;
       }
       .image-container {
         position: relative;
-        display: inline-block;
-        margin-bottom: 20px;
-      }
-      .svg-container {
-        position: relative;
-        display: inline-block;
+        width: 100%;
+        height: 100%;
       }
       .bitmap,
+      .svg-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
       .svg {
-        max-width: 100%;
-        height: auto;
+        cursor: move;
       }
       .resize-handle {
         position: absolute;
@@ -35,39 +39,39 @@
         background-color: #007bff;
         border: 1px solid #ffffff;
         border-radius: 50%;
-        transform: translate(-50%, -50%);
       }
       .resize-handle.nw {
         cursor: nw-resize;
+        top: 0;
+        left: 0;
       }
       .resize-handle.ne {
         cursor: ne-resize;
+        top: 0;
+        right: 0;
       }
       .resize-handle.sw {
         cursor: sw-resize;
+        bottom: 0;
+        left: 0;
       }
       .resize-handle.se {
         cursor: se-resize;
+        bottom: 0;
+        right: 0;
       }
-      .svg-container:focus-within .resize-handle {
-        display: block;
-      }
-      .svg-container:not(:focus-within) .resize-handle {
-        display: none;
+      .controls {
+        position: absolute;
+        top: 10px;
+        left: 10px;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <div class="file-inputs">
-        <input type="file" id="bitmapFile" accept="image/*" />
-        <input type="file" id="svgFile" accept=".svg" />
-      </div>
-
       <div class="image-container">
         <img class="bitmap" src="" alt="Bitmap Image" />
-
-        <div class="svg-container" tabindex="0">
+        <div class="svg-container">
           <img class="svg" src="" alt="SVG Image" />
           <div class="resize-handle nw"></div>
           <div class="resize-handle ne"></div>
@@ -75,25 +79,64 @@
           <div class="resize-handle se"></div>
         </div>
       </div>
-
       <div class="controls">
+        <input type="file" id="bitmapFile" accept="image/*" />
+        <input type="file" id="svgFile" accept=".svg" />
+        <button id="resetButton">Reset</button>
         <button id="zoomIn">Zoom In</button>
         <button id="zoomOut">Zoom Out</button>
         <button id="growSVG">Grow SVG</button>
         <button id="shrinkSVG">Shrink SVG</button>
       </div>
-
-      <div id="colorInfo"></div>
     </div>
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
+        const container = document.querySelector(".container");
+        const imageContainer = document.querySelector(".image-container");
         const svgContainer = document.querySelector(".svg-container");
         const svg = svgContainer.querySelector(".svg");
         const bitmap = document.querySelector(".bitmap");
         const handles = svgContainer.querySelectorAll(".resize-handle");
         const bitmapFile = document.getElementById("bitmapFile");
         const svgFile = document.getElementById("svgFile");
+        const resetButton = document.getElementById("resetButton");
+        const zoomInButton = document.getElementById("zoomIn");
+        const zoomOutButton = document.getElementById("zoomOut");
+        const growSVGButton = document.getElementById("growSVG");
+        const shrinkSVGButton = document.getElementById("shrinkSVG");
+
+        let isDragging = false;
+        let isResizing = false;
+        let startX,
+          startY,
+          startLeft,
+          startTop,
+          startWidth,
+          startHeight,
+          currentHandle;
+
+        function resizeImage(img, container) {
+          const containerRatio = container.clientWidth / container.clientHeight;
+          const imgRatio = img.naturalWidth / img.naturalHeight;
+
+          if (containerRatio > imgRatio) {
+            img.style.height = container.clientHeight * 0.8 + "px";
+            img.style.width = "auto";
+          } else {
+            img.style.width = container.clientWidth * 0.8 + "px";
+            img.style.height = "auto";
+          }
+        }
+
+        function resetImages() {
+          resizeImage(bitmap, imageContainer);
+          resizeImage(svg, imageContainer);
+          svgContainer.style.left = "50%";
+          svgContainer.style.top = "50%";
+          svgContainer.style.transform = "translate(-50%, -50%)";
+          updateHandlePositions();
+        }
 
         function updateHandlePositions() {
           const rect = svg.getBoundingClientRect();
@@ -102,51 +145,32 @@
               handle.style.left = "0px";
               handle.style.top = "0px";
             } else if (handle.classList.contains("ne")) {
-              handle.style.left = rect.width + "px";
+              handle.style.right = "0px";
               handle.style.top = "0px";
             } else if (handle.classList.contains("sw")) {
               handle.style.left = "0px";
-              handle.style.top = rect.height + "px";
+              handle.style.bottom = "0px";
             } else if (handle.classList.contains("se")) {
-              handle.style.left = rect.width + "px";
-              handle.style.top = rect.height + "px";
+              handle.style.right = "0px";
+              handle.style.bottom = "0px";
             }
           });
         }
 
-        // Update handle positions whenever the SVG size changes
-        new ResizeObserver(updateHandlePositions).observe(svg);
-
-        // Show handles when SVG container is focused
-        svgContainer.addEventListener("focus", function () {
-          handles.forEach((handle) => (handle.style.display = "block"));
-          updateHandlePositions();
-        });
-
-        // Hide handles when focus is lost
-        svgContainer.addEventListener("blur", function () {
-          handles.forEach((handle) => (handle.style.display = "none"));
-        });
-
-        // Prevent hiding handles when clicking inside the SVG container
-        svgContainer.addEventListener("mousedown", function (e) {
-          e.preventDefault();
-          this.focus();
-        });
-
-        // Load Bitmap Image
         bitmapFile.addEventListener("change", function (e) {
           const file = e.target.files[0];
           if (file) {
             const reader = new FileReader();
             reader.onload = function (e) {
               bitmap.src = e.target.result;
+              bitmap.onload = function () {
+                resetImages();
+              };
             };
             reader.readAsDataURL(file);
           }
         });
 
-        // Load SVG Image
         svgFile.addEventListener("change", function (e) {
           const file = e.target.files[0];
           if (file) {
@@ -154,114 +178,111 @@
             reader.onload = function (e) {
               svg.src = e.target.result;
               svg.onload = function () {
-                updateHandlePositions();
+                resetImages();
               };
             };
             reader.readAsDataURL(file);
           }
         });
 
-        document
-          .getElementById("zoomIn")
-          .addEventListener("click", function () {
-            zoomSVG(1.2);
-          });
+        resetButton.addEventListener("click", resetImages);
 
-        document
-          .getElementById("zoomOut")
-          .addEventListener("click", function () {
-            zoomSVG(0.8);
-          });
-
-        document
-          .getElementById("growSVG")
-          .addEventListener("click", function () {
-            growShrinkSVG(1.1);
-          });
-
-        document
-          .getElementById("shrinkSVG")
-          .addEventListener("click", function () {
-            growShrinkSVG(0.9);
-          });
-
-        function zoomSVG(factor) {
-          const currentWidth = svg.width.baseVal.value;
-          const currentHeight = svg.height.baseVal.value;
-          svg.width.baseVal.value = currentWidth * factor;
-          svg.height.baseVal.value = currentHeight * factor;
-          updateHandlePositions();
-        }
-
-        function growShrinkSVG(factor) {
-          const currentWidth = svg.width.baseVal.value;
-          const currentHeight = svg.height.baseVal.value;
-          svg.width.baseVal.value = currentWidth * factor;
-          svg.height.baseVal.value = currentHeight * factor;
-          updateHandlePositions();
-        }
-
-        let isResizing = false;
-        let currentHandle = null;
-        let startX, startY, startWidth, startHeight;
-
-        handles.forEach((handle) => {
-          handle.addEventListener("mousedown", startResize);
-        });
-
-        function startResize(e) {
-          isResizing = true;
-          currentHandle = e.target;
+        svg.addEventListener("mousedown", function (e) {
+          isDragging = true;
           startX = e.clientX;
           startY = e.clientY;
-          startWidth = svg.width.baseVal.value;
-          startHeight = svg.height.baseVal.value;
-          document.addEventListener("mousemove", resize);
-          document.addEventListener("mouseup", stopResize);
-        }
+          startLeft = svgContainer.offsetLeft;
+          startTop = svgContainer.offsetTop;
+        });
 
-        function resize(e) {
-          if (!isResizing) return;
+        document.addEventListener("mousemove", function (e) {
+          if (isDragging) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            svgContainer.style.left = startLeft + dx + "px";
+            svgContainer.style.top = startTop + dy + "px";
+          } else if (isResizing) {
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            let newWidth = startWidth;
+            let newHeight = startHeight;
 
-          const dx = e.clientX - startX;
-          const dy = e.clientY - startY;
+            if (currentHandle.classList.contains("se")) {
+              newWidth += dx;
+              newHeight += dy;
+            } else if (currentHandle.classList.contains("sw")) {
+              newWidth -= dx;
+              newHeight += dy;
+              svgContainer.style.left = startLeft + dx + "px";
+            } else if (currentHandle.classList.contains("ne")) {
+              newWidth += dx;
+              newHeight -= dy;
+              svgContainer.style.top = startTop + dy + "px";
+            } else if (currentHandle.classList.contains("nw")) {
+              newWidth -= dx;
+              newHeight -= dy;
+              svgContainer.style.left = startLeft + dx + "px";
+              svgContainer.style.top = startTop + dy + "px";
+            }
 
-          let newWidth = startWidth;
-          let newHeight = startHeight;
+            // Maintain aspect ratio
+            const aspectRatio = startWidth / startHeight;
+            if (newWidth / newHeight > aspectRatio) {
+              newWidth = newHeight * aspectRatio;
+            } else {
+              newHeight = newWidth / aspectRatio;
+            }
 
-          if (currentHandle.classList.contains("se")) {
-            newWidth += dx;
-            newHeight += dy;
-          } else if (currentHandle.classList.contains("sw")) {
-            newWidth -= dx;
-            newHeight += dy;
-          } else if (currentHandle.classList.contains("ne")) {
-            newWidth += dx;
-            newHeight -= dy;
-          } else if (currentHandle.classList.contains("nw")) {
-            newWidth -= dx;
-            newHeight -= dy;
+            svg.style.width = newWidth + "px";
+            svg.style.height = newHeight + "px";
+            updateHandlePositions();
           }
+        });
 
-          // Maintain aspect ratio
-          const aspectRatio = startWidth / startHeight;
-          if (newWidth / newHeight > aspectRatio) {
-            newWidth = newHeight * aspectRatio;
-          } else {
-            newHeight = newWidth / aspectRatio;
-          }
+        document.addEventListener("mouseup", function () {
+          isDragging = false;
+          isResizing = false;
+        });
 
-          svg.width.baseVal.value = newWidth;
-          svg.height.baseVal.value = newHeight;
+        handles.forEach((handle) => {
+          handle.addEventListener("mousedown", function (e) {
+            e.stopPropagation();
+            isResizing = true;
+            currentHandle = e.target;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = svg.offsetWidth;
+            startHeight = svg.offsetHeight;
+            startLeft = svgContainer.offsetLeft;
+            startTop = svgContainer.offsetTop;
+          });
+        });
 
+        function zoomSVG(factor) {
+          const currentWidth = svg.offsetWidth;
+          const currentHeight = svg.offsetHeight;
+          svg.style.width = currentWidth * factor + "px";
+          svg.style.height = currentHeight * factor + "px";
           updateHandlePositions();
         }
 
-        function stopResize() {
-          isResizing = false;
-          document.removeEventListener("mousemove", resize);
-          document.removeEventListener("mouseup", stopResize);
-        }
+        zoomInButton.addEventListener("click", function () {
+          zoomSVG(1.1);
+        });
+
+        zoomOutButton.addEventListener("click", function () {
+          zoomSVG(0.9);
+        });
+
+        growSVGButton.addEventListener("click", function () {
+          zoomSVG(1.1);
+        });
+
+        shrinkSVGButton.addEventListener("click", function () {
+          zoomSVG(0.9);
+        });
+
+        window.addEventListener("resize", resetImages);
       });
     </script>
   </body>
