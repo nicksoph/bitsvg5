@@ -1,208 +1,175 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SVG Control Points</title>
     <style>
       .container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
       }
-
+      .file-inputs,
+      .controls {
+        margin-bottom: 20px;
+      }
       .image-container {
         position: relative;
-        width: 800px;
-        height: 600px;
-        overflow: hidden;
-        border: 1px solid #ccc;
+        display: inline-block;
+        margin-bottom: 20px;
       }
-
+      .svg-container {
+        position: relative;
+        display: inline-block;
+      }
       .bitmap,
       .svg {
+        max-width: 100%;
+        height: auto;
+      }
+      .resize-handle {
         position: absolute;
-        top: 50%;
-        left: 50%;
-        transform-origin: center center;
+        width: 10px;
+        height: 10px;
+        background-color: #007bff;
+        border: 1px solid #ffffff;
+        border-radius: 50%;
       }
-
-      .controls {
-        margin-top: 10px;
+      .resize-handle.nw {
+        top: -5px;
+        left: -5px;
+        cursor: nw-resize;
       }
-
-      .file-inputs input[type="file"] {
+      .resize-handle.ne {
+        top: -5px;
+        right: -5px;
+        cursor: ne-resize;
+      }
+      .resize-handle.sw {
+        bottom: -5px;
+        left: -5px;
+        cursor: sw-resize;
+      }
+      .resize-handle.se {
+        bottom: -5px;
+        right: -5px;
+        cursor: se-resize;
+      }
+      .svg-container:focus-within .resize-handle {
+        display: block;
+      }
+      .svg-container:not(:focus-within) .resize-handle {
         display: none;
-      }
-
-      .file-inputs label,
-      button {
-        display: inline-block;
-        padding: 10px 15px;
-        background-color: #f0f0f0;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        cursor: pointer;
-        margin-right: 10px;
       }
     </style>
   </head>
   <body>
     <div class="container">
       <div class="file-inputs">
-        <label for="bitmapFile">Load Bitmap</label>
-        <input type="file" id="bitmapFile" accept="image/png" />
-        <label for="svgFile">Load SVG</label>
-        <input type="file" id="svgFile" accept="image/svg+xml" />
+        <button id="loadBitmap">Load Bitmap</button>
+        <button id="loadSVG">Load SVG</button>
       </div>
+
       <div class="image-container">
         <img class="bitmap" src="" alt="Bitmap Image" />
-        <img class="svg" src="" alt="SVG Image" />
+
+        <div class="svg-container" tabindex="0">
+          <img class="svg" src="" alt="SVG Image" />
+          <div class="resize-handle nw"></div>
+          <div class="resize-handle ne"></div>
+          <div class="resize-handle sw"></div>
+          <div class="resize-handle se"></div>
+        </div>
       </div>
+
       <div class="controls">
         <button id="zoomIn">Zoom In</button>
         <button id="zoomOut">Zoom Out</button>
-        <button id="moveLeft">Move Left</button>
-        <button id="moveRight">Move Right</button>
-        <button id="moveUp">Move Up</button>
-        <button id="moveDown">Move Down</button>
         <button id="growSVG">Grow SVG</button>
         <button id="shrinkSVG">Shrink SVG</button>
       </div>
+
       <div id="colorInfo"></div>
     </div>
 
     <script>
-      const bitmapFileInput = document.querySelector("#bitmapFile");
-      const svgFileInput = document.querySelector("#svgFile");
-      const bitmap = document.querySelector(".bitmap");
-      const svg = document.querySelector(".svg");
-      const colorInfo = document.getElementById("colorInfo");
-      const imageContainer = document.querySelector(".image-container");
+      document.addEventListener("DOMContentLoaded", function () {
+        const svgContainer = document.querySelector(".svg-container");
+        const svg = svgContainer.querySelector(".svg");
 
-      let svgScale = 1;
-      let svgX = 0;
-      let svgY = 0;
-      let zoom = 1;
-
-      function loadImage(file, imgElement) {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = function (e) {
-            imgElement.src = e.target.result;
-            imgElement.onload = () => {
-              imgElement.style.width = imgElement.naturalWidth + "px";
-              imgElement.style.height = imgElement.naturalHeight + "px";
-              resolve();
-            };
-          };
-          reader.readAsDataURL(file);
+        // Show handles when SVG container is focused
+        svgContainer.addEventListener("focus", function () {
+          this.querySelectorAll(".resize-handle").forEach(
+            (handle) => (handle.style.display = "block")
+          );
         });
-      }
 
-      bitmapFileInput.addEventListener("change", async function () {
-        await loadImage(this.files[0], bitmap);
-        updateImagePositions();
+        // Hide handles when focus is lost
+        svgContainer.addEventListener("blur", function () {
+          this.querySelectorAll(".resize-handle").forEach(
+            (handle) => (handle.style.display = "none")
+          );
+        });
+
+        // Prevent hiding handles when clicking inside the SVG container
+        svgContainer.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          this.focus();
+        });
+
+        // Placeholder functions for buttons
+        document
+          .getElementById("loadBitmap")
+          .addEventListener("click", function () {
+            console.log("Load Bitmap clicked");
+            // Implement bitmap loading logic here
+          });
+
+        document
+          .getElementById("loadSVG")
+          .addEventListener("click", function () {
+            console.log("Load SVG clicked");
+            // Implement SVG loading logic here
+          });
+
+        document
+          .getElementById("zoomIn")
+          .addEventListener("click", function () {
+            console.log("Zoom In clicked");
+            // Implement zoom in logic here
+          });
+
+        document
+          .getElementById("zoomOut")
+          .addEventListener("click", function () {
+            console.log("Zoom Out clicked");
+            // Implement zoom out logic here
+          });
+
+        document
+          .getElementById("growSVG")
+          .addEventListener("click", function () {
+            console.log("Grow SVG clicked");
+            // Implement SVG growth logic here
+          });
+
+        document
+          .getElementById("shrinkSVG")
+          .addEventListener("click", function () {
+            console.log("Shrink SVG clicked");
+            // Implement SVG shrink logic here
+          });
+
+        // Placeholder for resize logic
+        const resizeHandles = document.querySelectorAll(".resize-handle");
+        resizeHandles.forEach((handle) => {
+          handle.addEventListener("mousedown", function (e) {
+            console.log("Resize started");
+            // Implement resize logic here
+          });
+        });
       });
-
-      svgFileInput.addEventListener("change", async function () {
-        await loadImage(this.files[0], svg);
-        updateImagePositions();
-      });
-
-      function updateImagePositions() {
-        bitmap.style.transform = `translate(-50%, -50%) scale(${zoom})`;
-        svg.style.transform = `translate(calc(-50% + ${svgX}px), calc(-50% + ${svgY}px)) scale(${
-          svgScale * zoom
-        })`;
-
-        updateColorInfo();
-      }
-
-      function getColorAtPoint(x, y) {
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        canvas.width = bitmap.naturalWidth;
-        canvas.height = bitmap.naturalHeight;
-        context.drawImage(bitmap, 0, 0);
-        const pixelData = context.getImageData(x, y, 1, 1).data;
-        return `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
-      }
-
-      function updateColorInfo() {
-        const svgRect = svg.getBoundingClientRect();
-        const bitmapRect = bitmap.getBoundingClientRect();
-
-        const relativeX =
-          (svgRect.left + svgRect.width / 2 - bitmapRect.left) / zoom;
-        const relativeY =
-          (svgRect.top + svgRect.height / 2 - bitmapRect.top) / zoom;
-
-        const bitmapX = bitmap.naturalWidth / 2 + relativeX;
-        const bitmapY = bitmap.naturalHeight / 2 + relativeY;
-
-        const color = getColorAtPoint(bitmapX, bitmapY);
-        colorInfo.textContent = `SVG center position: (${relativeX.toFixed(
-          2
-        )}, ${relativeY.toFixed(2)}), Color: ${color}`;
-      }
-
-      document.getElementById("zoomIn").addEventListener("click", () => {
-        zoom *= 1.1;
-        updateImagePositions();
-      });
-
-      document.getElementById("zoomOut").addEventListener("click", () => {
-        zoom /= 1.1;
-        updateImagePositions();
-      });
-
-      document.getElementById("moveLeft").addEventListener("click", () => {
-        svgX -= 10 / zoom;
-        updateImagePositions();
-      });
-
-      document.getElementById("moveRight").addEventListener("click", () => {
-        svgX += 10 / zoom;
-        updateImagePositions();
-      });
-
-      document.getElementById("moveUp").addEventListener("click", () => {
-        svgY -= 10 / zoom;
-        updateImagePositions();
-      });
-
-      document.getElementById("moveDown").addEventListener("click", () => {
-        svgY += 10 / zoom;
-        updateImagePositions();
-      });
-
-      document.getElementById("growSVG").addEventListener("click", () => {
-        const oldScale = svgScale;
-
-        svgScale *= 1.1;
-
-        // Adjust position to keep the center in place
-        svgX *= svgScale / oldScale;
-        svgY *= svgScale / oldScale;
-
-        updateImagePositions();
-      });
-
-      document.getElementById("shrinkSVG").addEventListener("click", () => {
-        const oldScale = svgScale;
-
-        svgScale /= 1.1;
-
-        // Adjust position to keep the center in place
-        svgX *= svgScale / oldScale;
-        svgY *= svgScale / oldScale;
-
-        updateImagePositions();
-      });
-
-      // Update color info whenever the SVG moves or resizes
-      svg.addEventListener("transitionend", updateColorInfo);
-
-      // Add event listener for window resize
-      window.addEventListener("resize", updateImagePositions);
     </script>
   </body>
 </html>
