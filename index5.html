@@ -60,8 +60,8 @@
   <body>
     <div class="container">
       <div class="file-inputs">
-        <button id="loadBitmap">Load Bitmap</button>
-        <button id="loadSVG">Load SVG</button>
+        <input type="file" id="bitmapFile" accept="image/*" />
+        <input type="file" id="svgFile" accept=".svg" />
       </div>
 
       <div class="image-container">
@@ -90,7 +90,10 @@
       document.addEventListener("DOMContentLoaded", function () {
         const svgContainer = document.querySelector(".svg-container");
         const svg = svgContainer.querySelector(".svg");
+        const bitmap = document.querySelector(".bitmap");
         const handles = svgContainer.querySelectorAll(".resize-handle");
+        const bitmapFile = document.getElementById("bitmapFile");
+        const svgFile = document.getElementById("svgFile");
 
         function updateHandlePositions() {
           const rect = svg.getBoundingClientRect();
@@ -131,94 +134,125 @@
           this.focus();
         });
 
-        document
-          .getElementById("loadBitmap")
-          .addEventListener("click", function () {
-            console.log("Load Bitmap clicked");
-            // Implement bitmap loading logic here
-          });
+        // Load Bitmap Image
+        bitmapFile.addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              bitmap.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+          }
+        });
 
-        document
-          .getElementById("loadSVG")
-          .addEventListener("click", function () {
-            console.log("Load SVG clicked");
-            // Implement SVG loading logic here
-            // For example:
-            // svg.src = 'path/to/your/svg.svg';
-            // svg.onload = function() {
-            //     updateHandlePositions();
-            // };
-          });
+        // Load SVG Image
+        svgFile.addEventListener("change", function (e) {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              svg.src = e.target.result;
+              svg.onload = function () {
+                updateHandlePositions();
+              };
+            };
+            reader.readAsDataURL(file);
+          }
+        });
 
         document
           .getElementById("zoomIn")
           .addEventListener("click", function () {
-            console.log("Zoom In clicked");
-            // Implement zoom in logic here
-            // For example:
-            svg.style.width = svg.offsetWidth * 1.2 + "px";
-            updateHandlePositions();
+            zoomSVG(1.2);
           });
 
         document
           .getElementById("zoomOut")
           .addEventListener("click", function () {
-            console.log("Zoom Out clicked");
-            // Implement zoom out logic here
-            // For example:
-            svg.style.width = svg.offsetWidth * 0.8 + "px";
-            updateHandlePositions();
+            zoomSVG(0.8);
           });
 
         document
           .getElementById("growSVG")
           .addEventListener("click", function () {
-            console.log("Grow SVG clicked");
-            // Implement SVG growth logic here
-            // For example:
-            svg.style.width = svg.offsetWidth * 1.1 + "px";
-            svg.style.height = svg.offsetHeight * 1.1 + "px";
-            updateHandlePositions();
+            growShrinkSVG(1.1);
           });
 
         document
           .getElementById("shrinkSVG")
           .addEventListener("click", function () {
-            console.log("Shrink SVG clicked");
-            // Implement SVG shrink logic here
-            // For example:
-            svg.style.width = svg.offsetWidth * 0.9 + "px";
-            svg.style.height = svg.offsetHeight * 0.9 + "px";
-            updateHandlePositions();
+            growShrinkSVG(0.9);
           });
 
-        // Resize logic
+        function zoomSVG(factor) {
+          const currentWidth = svg.width.baseVal.value;
+          const currentHeight = svg.height.baseVal.value;
+          svg.width.baseVal.value = currentWidth * factor;
+          svg.height.baseVal.value = currentHeight * factor;
+          updateHandlePositions();
+        }
+
+        function growShrinkSVG(factor) {
+          const currentWidth = svg.width.baseVal.value;
+          const currentHeight = svg.height.baseVal.value;
+          svg.width.baseVal.value = currentWidth * factor;
+          svg.height.baseVal.value = currentHeight * factor;
+          updateHandlePositions();
+        }
+
         let isResizing = false;
+        let currentHandle = null;
         let startX, startY, startWidth, startHeight;
 
         handles.forEach((handle) => {
-          handle.addEventListener("mousedown", function (e) {
-            isResizing = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            startWidth = svg.offsetWidth;
-            startHeight = svg.offsetHeight;
-
-            document.addEventListener("mousemove", resize);
-            document.addEventListener("mouseup", stopResize);
-          });
+          handle.addEventListener("mousedown", startResize);
         });
+
+        function startResize(e) {
+          isResizing = true;
+          currentHandle = e.target;
+          startX = e.clientX;
+          startY = e.clientY;
+          startWidth = svg.width.baseVal.value;
+          startHeight = svg.height.baseVal.value;
+          document.addEventListener("mousemove", resize);
+          document.addEventListener("mouseup", stopResize);
+        }
 
         function resize(e) {
           if (!isResizing) return;
 
-          const deltaX = e.clientX - startX;
-          const deltaY = e.clientY - startY;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
 
-          // Implement your resize logic here
-          // This is a simple example that only handles the SE corner:
-          svg.style.width = startWidth + deltaX + "px";
-          svg.style.height = startHeight + deltaY + "px";
+          let newWidth = startWidth;
+          let newHeight = startHeight;
+
+          if (currentHandle.classList.contains("se")) {
+            newWidth += dx;
+            newHeight += dy;
+          } else if (currentHandle.classList.contains("sw")) {
+            newWidth -= dx;
+            newHeight += dy;
+          } else if (currentHandle.classList.contains("ne")) {
+            newWidth += dx;
+            newHeight -= dy;
+          } else if (currentHandle.classList.contains("nw")) {
+            newWidth -= dx;
+            newHeight -= dy;
+          }
+
+          // Maintain aspect ratio
+          const aspectRatio = startWidth / startHeight;
+          if (newWidth / newHeight > aspectRatio) {
+            newWidth = newHeight * aspectRatio;
+          } else {
+            newHeight = newWidth / aspectRatio;
+          }
+
+          svg.width.baseVal.value = newWidth;
+          svg.height.baseVal.value = newHeight;
 
           updateHandlePositions();
         }
