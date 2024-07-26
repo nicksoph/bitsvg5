@@ -53,6 +53,13 @@
         background-color: #007bff;
         position: absolute;
         border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .svg-container:hover .resize-handle,
+      .svg-container.resizing .resize-handle {
+        opacity: 1;
       }
 
       .resize-handle.nw {
@@ -238,6 +245,7 @@
         handle.addEventListener("mousedown", (e) => {
           isResizing = true;
           currentHandle = e.target;
+          svgContainer.classList.add("resizing");
           e.stopPropagation();
         });
       });
@@ -279,6 +287,26 @@
 
       document.addEventListener("mouseup", () => {
         isResizing = false;
+        svgContainer.classList.remove("resizing");
+      });
+
+      // Show resize handles on hover
+      svgContainer.addEventListener("mouseenter", () => {
+        svgContainer.classList.add("resizing");
+      });
+
+      // Hide resize handles when mouse leaves the SVG container
+      svgContainer.addEventListener("mouseleave", () => {
+        if (!isResizing) {
+          svgContainer.classList.remove("resizing");
+        }
+      });
+
+      // Hide resize handles when clicking outside the SVG container
+      document.addEventListener("click", (e) => {
+        if (!svgContainer.contains(e.target)) {
+          svgContainer.classList.remove("resizing");
+        }
       });
     </script>
   </body>
