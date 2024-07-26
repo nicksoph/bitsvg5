@@ -3,34 +3,70 @@
   <head>
     <style>
       .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .image-container {
         position: relative;
-        width: 400px;
-        height: 400px;
+        width: 800px;
+        height: 600px;
+        overflow: hidden;
+        border: 1px solid #ccc;
       }
 
-      .bitmap {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-      }
-
+      .bitmap,
       .svg {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        top: 50%;
+        left: 50%;
+        transform-origin: center center;
+      }
+
+      .controls {
+        margin-top: 10px;
+      }
+
+      .file-inputs input[type="file"] {
+        display: none;
+      }
+
+      .file-inputs label,
+      button {
+        display: inline-block;
+        padding: 10px 15px;
+        background-color: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 10px;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <input type="file" id="bitmapFile" accept="image/png" />
-      <input type="file" id="svgFile" accept="image/svg+xml" />
-      <img class="bitmap" src="" alt="Bitmap Image" />
-      <img class="svg" src="" alt="SVG Image" />
+      <div class="file-inputs">
+        <label for="bitmapFile">Load Bitmap</label>
+        <input type="file" id="bitmapFile" accept="image/png" />
+        <label for="svgFile">Load SVG</label>
+        <input type="file" id="svgFile" accept="image/svg+xml" />
+      </div>
+      <div class="image-container">
+        <img class="bitmap" src="" alt="Bitmap Image" />
+        <img class="svg" src="" alt="SVG Image" />
+      </div>
+      <div class="controls">
+        <button id="zoomIn">Zoom In</button>
+        <button id="zoomOut">Zoom Out</button>
+        <button id="moveLeft">Move Left</button>
+        <button id="moveRight">Move Right</button>
+        <button id="moveUp">Move Up</button>
+        <button id="moveDown">Move Down</button>
+        <button id="growSVG">Grow SVG</button>
+        <button id="shrinkSVG">Shrink SVG</button>
+      </div>
+      <div id="colorInfo"></div>
     </div>
 
     <script>
@@ -38,41 +74,135 @@
       const svgFileInput = document.querySelector("#svgFile");
       const bitmap = document.querySelector(".bitmap");
       const svg = document.querySelector(".svg");
+      const colorInfo = document.getElementById("colorInfo");
+      const imageContainer = document.querySelector(".image-container");
 
-      bitmapFileInput.addEventListener("change", function () {
-        const file = bitmapFileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          bitmap.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+      let svgScale = 1;
+      let svgX = 0;
+      let svgY = 0;
+      let zoom = 1;
+
+      function loadImage(file, imgElement) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            imgElement.src = e.target.result;
+            imgElement.onload = () => {
+              imgElement.style.width = imgElement.naturalWidth + "px";
+              imgElement.style.height = imgElement.naturalHeight + "px";
+              resolve();
+            };
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      bitmapFileInput.addEventListener("change", async function () {
+        await loadImage(this.files[0], bitmap);
+        updateImagePositions();
       });
 
-      svgFileInput.addEventListener("change", function () {
-        const file = svgFileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          svg.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+      svgFileInput.addEventListener("change", async function () {
+        await loadImage(this.files[0], svg);
+        updateImagePositions();
       });
 
-      // Get the position of the SVG element relative to the bitmap image
-      const svgRect = svg.getBoundingClientRect();
-      const bitmapRect = bitmap.getBoundingClientRect();
-      const svgX = svgRect.left - bitmapRect.left;
-      const svgY = svgRect.top - bitmapRect.top;
+      function updateImagePositions() {
+        bitmap.style.transform = `translate(-50%, -50%) scale(${zoom})`;
+        svg.style.transform = `translate(calc(-50% + ${svgX}px), calc(-50% + ${svgY}px)) scale(${
+          svgScale * zoom
+        })`;
 
-      // Get the color of the pixel at the SVG element's position
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      context.drawImage(bitmap, 0, 0);
-      const pixelColor = context.getImageData(svgX, svgY, 1, 1).data;
+        updateColorInfo();
+      }
 
-      // Apply the color to the SVG element
-      svg.style.fill = `rgb(${pixelColor[0]}, ${pixelColor[1]}, ${pixelColor[2]})`;
+      function getColorAtPoint(x, y) {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        canvas.width = bitmap.naturalWidth;
+        canvas.height = bitmap.naturalHeight;
+        context.drawImage(bitmap, 0, 0);
+        const pixelData = context.getImageData(x, y, 1, 1).data;
+        return `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
+      }
+
+      function updateColorInfo() {
+        const svgRect = svg.getBoundingClientRect();
+        const bitmapRect = bitmap.getBoundingClientRect();
+
+        const relativeX =
+          (svgRect.left + svgRect.width / 2 - bitmapRect.left) / zoom;
+        const relativeY =
+          (svgRect.top + svgRect.height / 2 - bitmapRect.top) / zoom;
+
+        const bitmapX = bitmap.naturalWidth / 2 + relativeX;
+        const bitmapY = bitmap.naturalHeight / 2 + relativeY;
+
+        const color = getColorAtPoint(bitmapX, bitmapY);
+        colorInfo.textContent = `SVG center position: (${relativeX.toFixed(
+          2
+        )}, ${relativeY.toFixed(2)}), Color: ${color}`;
+      }
+
+      document.getElementById("zoomIn").addEventListener("click", () => {
+        zoom *= 1.1;
+        updateImagePositions();
+      });
+
+      document.getElementById("zoomOut").addEventListener("click", () => {
+        zoom /= 1.1;
+        updateImagePositions();
+      });
+
+      document.getElementById("moveLeft").addEventListener("click", () => {
+        svgX -= 10 / zoom;
+        updateImagePositions();
+      });
+
+      document.getElementById("moveRight").addEventListener("click", () => {
+        svgX += 10 / zoom;
+        updateImagePositions();
+      });
+
+      document.getElementById("moveUp").addEventListener("click", () => {
+        svgY -= 10 / zoom;
+        updateImagePositions();
+      });
+
+      document.getElementById("moveDown").addEventListener("click", () => {
+        svgY += 10 / zoom;
+        updateImagePositions();
+      });
+
+      document.getElementById("growSVG").addEventListener("click", () => {
+        const oldScale = svgScale;
+
+        svgScale *= 1.1;
+
+        // Adjust position to keep the center in place
+        svgX *= svgScale / oldScale;
+        svgY *= svgScale / oldScale;
+
+        updateImagePositions();
+      });
+
+      document.getElementById("shrinkSVG").addEventListener("click", () => {
+        const oldScale = svgScale;
+
+        svgScale /= 1.1;
+
+        // Adjust position to keep the center in place
+        svgX *= svgScale / oldScale;
+        svgY *= svgScale / oldScale;
+
+        updateImagePositions();
+      });
+
+      // Update color info whenever the SVG moves or resizes
+      svg.addEventListener("transitionend", updateColorInfo);
+
+      // Add event listener for window resize
+      window.addEventListener("resize", updateImagePositions);
     </script>
   </body>
 </html>
